@@ -30,6 +30,10 @@ description: Manages Aliyun Codeup merge requests via `codeup` CLI—create, rev
 - Codeup 用 `--wip` 在标题前加 `[wip]`，**不要**手写 `[Draft]`。
 - 转正式：`codeup mr update <repo> <localId> --no-wip`。
 
+### 目标分支约定
+
+**除非用户明确指定目标分支，否则一律以仓库默认分支（即远程 HEAD 指向的分支，通常为 `master` 或 `main`）作为目标分支（`<target>`）。**
+
 ### 流程
 
 ```
@@ -69,7 +73,7 @@ EOF
 )" --json
 ```
 
-显式指定仓库/分支：`codeup mr create zlxt/agent/foo --source-branch feat/x --target-branch master -t "..."`
+显式指定仓库/分支：`codeup mr create zlxt/agent/foo --source-branch feat/x --target-branch develop -t "..."`
 
 ## 评审 MR
 
