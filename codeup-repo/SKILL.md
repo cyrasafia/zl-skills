@@ -15,15 +15,64 @@ codeup repo list|get|create|update
 codeup mr create|list|get|update|review|merge
 ```
 
-## 前置检查
+## 工具安装与配置
 
-1. 确认 CLI 可用：`codeup --help`
-2. 若未安装：在 [codeup-cli 仓库](https://codeup.aliyun.com/zlxt/zl-product/codeup-cli) 中 `npm install && npm link`
-3. 确认配置：`codeup config get`  
-   必填：`domain`（OpenAPI 接入点，如 `openapi-rdc.aliyuncs.com`，**不是** `codeup.aliyun.com`）、`organizationId`、`token`  
-   可选：`defaultNamespaceId`（父路径，数字 ID 或 `zlxt/zl-product` 形式路径）
+### 安装
 
-缺失时用 `codeup config set <key> <value>` 或环境变量 `CODEUP_DOMAIN` / `CODEUP_ORG_ID` / `CODEUP_TOKEN` / `CODEUP_DEFAULT_NAMESPACE`。
+要求 Node.js 18+。源码在 [codeup-cli 仓库](https://github.com/cyrasafia/codeup-cli)，未安装时：
+
+```bash
+git clone https://github.com/cyrasafia/codeup-cli
+cd codeup-cli
+npm install
+npm link        # 将 codeup 命令安装到全局 PATH
+```
+
+确认安装成功：`codeup --help`
+
+### 配置（三项必填，环境变量优先于配置文件）
+
+| 配置项 | 环境变量 | 说明 |
+|--------|----------|------|
+| `domain` | `CODEUP_DOMAIN` | OpenAPI 接入点，如 `openapi-rdc.aliyuncs.com`（**不是** `codeup.aliyun.com`） |
+| `organizationId` | `CODEUP_ORG_ID` | 组织 ID（中心版必需） |
+| `token` | `CODEUP_TOKEN` | 个人访问令牌（`pt-xxxx...`） |
+
+可选：`defaultNamespaceId`（默认父路径，数字 ID 或 `zlxt/zl-product` 形式路径）→ 环境变量 `CODEUP_DEFAULT_NAMESPACE`。
+
+**方式一：环境变量**
+
+```bash
+export CODEUP_DOMAIN=openapi-rdc.aliyuncs.com
+export CODEUP_ORG_ID=<组织ID>
+export CODEUP_TOKEN=<pt-令牌>
+export CODEUP_DEFAULT_NAMESPACE=zlxt/zl-product   # 可选
+```
+
+**方式二：写入配置文件**
+
+```bash
+codeup config set domain openapi-rdc.aliyuncs.com
+codeup config set org-id <组织ID>
+codeup config set token <pt-令牌>
+codeup config set default-namespace-id zlxt/zl-product   # 可选
+
+codeup config get    # 查看配置
+codeup config path   # 配置文件位置
+```
+
+### PAT 获取与权限
+
+1. 登录 [云效工作台](https://devops.aliyun.com/) → 右上角 **用户头像** → **个人设置** → **个人访问令牌** → **新建访问令牌**。
+2. 填写名称、到期时间，在 **选择权限** 中勾选对应权限（遵循最小权限）：
+   - `codeup repo list/get`：**代码管理 · 代码仓库 · 只读**
+   - `codeup repo create/update`：**代码管理 · 代码仓库 · 读写**
+   - `codeup mr list/get`：**代码管理 · 合并请求 · 只读**
+   - `codeup mr create/update/review/merge`：**代码管理 · 合并请求 · 读写**
+   - 用路径（如 `zlxt/zl-product`）作父分组：另需 **代码管理 · 代码组 · 只读**（仅用数字 ID 可不勾选）
+3. 创建成功后**立刻复制保存**：云效只在创建时显示一次，之后无法查看原文。
+
+组织 ID 获取：云效 → 用户头像 → 个人设置 → **已加入组织** 中查看。
 
 脚本化时加 **`--json`** 解析输出。
 
@@ -129,4 +178,4 @@ git push -u origin main
 | 路径解析 403 | PAT 需 **代码组 · 只读**；或改用数字 `namespaceId` |
 | `git push` 要用户名密码 | remote 必须是 **SSH** URL，不是 HTTPS |
 
-详细配置与权限说明见 codeup-cli 仓库 [README.md](https://codeup.aliyun.com/zlxt/zl-product/codeup-cli)。
+详细配置与权限说明见 codeup-cli 仓库 [README.md](https://github.com/cyrasafia/codeup-cli)。

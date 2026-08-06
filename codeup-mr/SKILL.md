@@ -5,7 +5,37 @@ description: Manages Aliyun Codeup merge requests via `codeup` CLI—create, rev
 
 # Codeup MR 管理
 
-通过 **`codeup mr`** 管理云效合并请求。CLI 配置与 PAT 见 [codeup-repo](../codeup-repo/SKILL.md)。
+通过 **`codeup mr`** 管理云效合并请求。
+
+## CLI 配置与 PAT
+
+### 安装
+
+```bash
+codeup --help        # 确认已安装
+```
+
+若未安装，在 [codeup-cli 仓库](https://github.com/cyrasafia/codeup-cli) 中 `npm install && npm link`。
+
+### 配置
+
+```bash
+codeup config get    # 查看当前配置
+```
+
+必填项（缺失时用 `codeup config set <key> <value>` 或环境变量设置）：
+
+| 配置项 | 值 | 环境变量 |
+|--------|----|---------|
+| `domain` | OpenAPI 接入点，如 `openapi-rdc.aliyuncs.com`（**不是** `codeup.aliyun.com`） | `CODEUP_DOMAIN` |
+| `organizationId` | 组织 ID | `CODEUP_ORG_ID` |
+| `token` | PAT（个人访问令牌） | `CODEUP_TOKEN` |
+
+可选：`defaultNamespaceId`（父路径，数字 ID 或 `zlxt/zl-product` 形式路径）→ `CODEUP_DEFAULT_NAMESPACE`。
+
+### PAT 权限
+
+创建/评审/合并 MR 需 PAT 勾选 **合并请求 · 读写**（仅查询可只读）。权限不足时返回 403，需在云效控制台重新生成 PAT。
 
 ## 语言约定
 
@@ -172,7 +202,7 @@ codeup mr update <repo> <localId> -t "新标题" -d "新描述"
 
 | 现象 | 处理 |
 |------|------|
-| 403 合并请求 | PAT 勾选 **合并请求 · 读写** |
+| 403 合并请求 | PAT 未勾选 **合并请求 · 读写**，在云效控制台重新生成 PAT |
 | 冲突 | 源分支 rebase/merge 目标分支后 push，再合并 |
 | 源分支 = 目标分支 | 切功能分支或 `--source-branch` |
 | 重复 MR | `codeup mr list --state opened` |
@@ -180,4 +210,4 @@ codeup mr update <repo> <localId> -t "新标题" -d "新描述"
 
 ## 关联技能
 
-- 仓库与 remote 配置：[codeup-repo](../codeup-repo/SKILL.md)
+- 仓库创建与 remote 配置（可选）：[codeup-repo](../codeup-repo/SKILL.md)
