@@ -1,6 +1,10 @@
 ---
 name: feishu-project-create-requirement
-description: Create story work items in Feishu Project from PRD markdown using feishu-project CLI
+description: >-
+  从 PRD Markdown 在飞书项目中创建需求（story）工作项：读取标题、飞书文档链接与需求描述，
+  通过 `feishu-project` CLI 创建并指派产品经理等角色。
+  当用户说「把 xxx.md 在飞书项目中创建一个需求」「创建需求」「创建工作项」，
+  或提到飞书项目、feishu-project、把 PRD 落成需求时，都应使用本技能。
 ---
 # 飞书项目创建需求规则
 

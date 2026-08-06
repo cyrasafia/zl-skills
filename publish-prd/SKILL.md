@@ -3,12 +3,15 @@ name: publish-prd
 description: >-
   一键发布项目到飞书文档、原型服务器和文档仓库（Codeup Git）。
   按顺序完成 Git 初始化/关联、原型发布、PRD 补全与飞书发布、README 生成与推送。
-  当用户说"发布项目"、"同步到飞书"、"发布PRD"、"publish"时触发。
+  当用户说"发布项目"、"同步到飞书"、"发布PRD"、"publish"、"把项目上线到原型服务器"、
+  "初始化并关联远程仓库"、"补全 PRD 并发布"时，都应使用本技能。
 ---
 
 # 发布项目（publish-prd）
 
 将项目**同步发布**到三个目标：**原型服务器**、**飞书文档**、**Codeup Git 仓库**。
+
+本技能是一个**编排技能**：它按顺序串联多个子技能，本身不直接操作具体工具。每个步骤的实际执行委托给对应的子技能，由它们负责工具调用、错误处理与安装引导。这样工具的升级与安装说明集中在各自技能里维护，避免重复。
 
 ## 何时使用本技能
 
@@ -17,16 +20,44 @@ description: >-
 - 用户说"初始化并关联远程仓库"。
 - 用户说"补全 PRD 并发布"。
 
-## 前置条件
+## 依赖的子技能
 
-| 工具/技能 | 用途 | 检查方式 |
-|-----------|------|----------|
-| `git` | 版本管理与推送 | `git --version` |
-| `codeup` CLI | Codeup 仓库管理 | `codeup --help` |
-| `publish-rp` | 原型发布到原型服务器 | `publish-rp --help` |
-| `publish-to-feishu` | Markdown 发布到飞书文档 | `publish-to-feishu --help` |
+| 子技能 | 负责的步骤 | 说明 |
+|--------|------------|------|
+| [codeup-repo](../codeup-repo/SKILL.md) | 步骤一：Git 初始化与远程关联 | 仓库创建、远程关联、SSH 配置均由该技能处理 |
+| `publish-rp`（CLI） | 步骤二：原型发布 | 见下文「publish-rp 安装说明」 |
+| [write-prd](../write-prd/SKILL.md) | 步骤三：补全 PRD NOTE 与原型链接 | PRD 文档结构补全由该技能处理 |
+| [publish-to-feishu](../publish-to-feishu/SKILL.md) | 步骤三：PRD 发布到飞书 | Markdown → 飞书文档、安装/配置/错误处理均由该技能处理 |
 
-缺失工具时提示用户安装或跳过对应步骤。
+缺失某子技能所依赖的工具时，**不要**自行猜测安装命令——加载对应子技能并按其「工具安装与配置」章节引导用户，或询问是否跳过该步骤。
+
+## publish-rp 安装说明
+
+`publish-rp` 是独立 CLI，将本地原型目录镜像同步到 `prototype-master` 仓库并推送，生成在线预览地址。
+
+- 仓库：https://github.com/cyrasafia/publish-rp
+- 环境要求：[Bun](https://bun.sh) 1.1+、系统已安装 `rsync`、`git`（push 需 SSH 可访问 Codeup）
+
+```bash
+git clone https://github.com/cyrasafia/publish-rp.git
+cd publish-rp
+bun link
+```
+
+之后在任意目录可用 `publish-rp`。取消链接：`bun unlink publish-rp`。
+
+首次配置（指定 rp_home，即 prototype-master 仓库本地路径）：
+
+```bash
+publish-rp config --rp-home "/home/<user>/协作工作区/原型"
+```
+
+配置文件查找顺序：
+
+1. 当前目录下的 `publish-rp-config.json`（若存在）
+2. 否则 `~/.config/publish-rp/publish-rp-config.json`
+
+示例见仓库内 `publish-rp-config.example.json`。
 
 ## 执行步骤
 
@@ -38,43 +69,11 @@ description: >-
 
 **目标**：确保项目已初始化 Git 且已关联 Codeup 远程仓库。
 
-#### 1.1 检查 Git 初始化
+**委托给 `codeup-repo` 技能**：先做 Git 初始化检查（`git rev-parse --is-inside-work-tree`，否则 `git init`），再检查 `git remote get-url origin`。无远程时，按 `codeup-repo` 的仓库创建 + SSH 关联流程执行（确定 repo 名称 → `codeup repo create` → 取 `sshUrlToRepo` → `git remote add origin` → `git push -u`）。
 
-```bash
-git rev-parse --is-inside-work-tree 2>/dev/null
-```
+repo 名称约定：优先用项目根目录文件夹名称；含中文/特殊字符/空格时，按项目内容选合适英文名（如 `hotel-detail-page`）。
 
-- 返回 `true` → 已初始化，跳到 1.2
-- 返回非 `true` 或报错 → 执行 `git init`
-
-#### 1.2 检查远程仓库
-
-```bash
-git remote get-url origin 2>/dev/null
-```
-
-- 有输出 → 远程已关联，跳到步骤二
-- 无输出 → 需创建并关联远程仓库
-
-#### 1.3 创建远程仓库并关联
-
-1. 确定 repo 名称：优先使用**项目根目录文件夹名称**（`basename` of CWD）。
-   - 名称包含中文、特殊字符、空格时，根据项目内容选择合适的英文 repo 名称（如 `hotel-detail-page`）。
-2. 使用 **`codeup-repo`** 技能创建远程仓库：
-
-```bash
-codeup repo create <repo-name> --json
-```
-
-3. 从 `--json` 输出中提取 `sshUrlToRepo`。
-4. 关联远程并推送：
-
-```bash
-git remote add origin <sshUrlToRepo>
-git push -u origin master   # 或 main，以本地分支名为准
-```
-
-**注意**：`git push` 需要访问 SSH 密钥，必须在沙箱外执行。
+**注意**：`git push` 需访问 SSH 密钥，必须在沙箱外执行。
 
 ---
 
@@ -95,11 +94,14 @@ find prototype/ -name "*.html" -type f 2>/dev/null | head -1
 
 #### 2.2 执行发布
 
+若 `publish-rp` 未安装，按上文「publish-rp 安装说明」引导用户安装或询问是否跳过。安装后执行：
+
 ```bash
 publish-rp ./prototype
 ```
 
-- 记录输出中的**预览链接**（通常为 `http://rp.histar.com/<repo-name>/`），后续步骤三需要用到。
+- 记录输出中的**预览链接**（通常为 `http://rp.histar.com/<repo-name>/`），步骤三需要用到。
+- 若需自定义 slug 或提交说明，追加 `--slug <name>` / `--message "<text>"`；预览可用 `--dry-run`。
 
 ---
 
@@ -118,16 +120,16 @@ find prd/ -name "*.md" -type f 2>/dev/null | head -1
 - 有输出 → 存在 PRD，继续 3.2
 - 无输出 → 无 PRD，**跳过本步骤**，记录「无 PRD，已跳过」
 
-#### 3.2 补全 PRD
+#### 3.2 补全 PRD（委托 write-prd 技能）
 
-对 `prd/` 下**所有** `.md` 文件逐个执行以下操作：
+对 `prd/` 下**所有** `.md` 文件逐个执行：
 
 1. **补全 NOTE**：使用 **`write-prd`** 技能的逻辑，为每个 PRD 补全标题下方的 `> [!NOTE]` 文档仓库说明（如果有远程仓库的话）。
 2. **补全原型预览链接**：如果步骤二成功获取到了预览链接，在每个 PRD 的「参考链接」章节中添加原型预览链接。若没有「参考链接」章节则新增。
 
-#### 3.3 发布到飞书
+#### 3.3 发布到飞书（委托 publish-to-feishu 技能）
 
-使用 **`publish-to-feishu`** 技能，逐个发布 `prd/` 下的 `.md` 文件：
+使用 **`publish-to-feishu`** 技能，逐个发布 `prd/` 下的 `.md` 文件。具体命令、安装检查、配置与错误处理均按该技能说明执行：
 
 ```bash
 publish-to-feishu "<markdown_path>"
@@ -186,21 +188,12 @@ git push origin master   # 或 main
 - ⏭️ 已跳过（无相关内容）
 - ❌ 执行失败（附错误信息）
 
-## 关联技能
-
-| 技能 | 关系 |
-|------|------|
-| [codeup-repo](../codeup-repo/SKILL.md) | 仓库创建与远程关联（步骤一） |
-| [write-prd](../write-prd/SKILL.md) | PRD 补全 NOTE 与原型链接（步骤三） |
-| [publish-to-feishu](../publish-to-feishu/SKILL.md) | Markdown 发布到飞书文档（步骤三） |
-
 ## 常见问题
 
 | 现象 | 处理 |
 |------|------|
-| `codeup` 命令不存在 | 提示安装 codeup-cli 或跳过步骤一 |
-| `publish-rp` 命令不存在 | 提示安装或跳过步骤二 |
-| `publish-to-feishu` 命令不存在 | 提示安装或跳过步骤三 |
+| `codeup` 命令不存在 | 加载 codeup-repo 技能，按其安装说明引导，或跳过步骤一 |
+| `publish-rp` 命令不存在 | 按上文「publish-rp 安装说明」引导安装，或跳过步骤二 |
+| `publish-to-feishu` 命令不存在 | 加载 publish-to-feishu 技能，按其安装说明引导，或跳过步骤三 |
 | `git push` 失败（Permission denied） | SSH 密钥未配置，提示在沙箱外执行 |
-| 403 创建仓库 | PAT 权限不足，提示检查 codeup config |
-| 飞书发布失败（token 过期） | 提示更新飞书 token |
+| 飞书发布失败（token 过期） | 加载 publish-to-feishu 技能，按其说明重新 `auth` |
