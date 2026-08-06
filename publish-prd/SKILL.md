@@ -31,6 +31,31 @@ description: >-
 
 缺失某子技能所依赖的工具时，**不要**自行猜测安装命令——加载对应子技能并按其「工具安装与配置」章节引导用户，或询问是否跳过该步骤。
 
+### 安装依赖的子技能
+
+本技能依赖的子技能需先安装到位，推荐使用 [`skills`](https://github.com/vercel-labs/skills) CLI 按需安装（无需全局安装）：
+
+```bash
+# 安装本技能依赖的全部子技能（含本技能自身）
+npx skills add https://github.com/cyrasafia/zl-skills \
+  --skill publish-prd \
+  --skill codeup-repo \
+  --skill write-prd \
+  --skill publish-to-feishu
+
+# 或安装到全局（所有项目可用）
+npx skills add https://github.com/cyrasafia/zl-skills \
+  --skill codeup-repo --skill write-prd --skill publish-to-feishu -g
+```
+
+仅缺某个子技能时也可单独安装，例如：
+
+```bash
+npx skills add https://github.com/cyrasafia/zl-skills --skill codeup-repo
+```
+
+安装完成后，AI 助手会根据技能描述自动匹配并加载，无需手动配置。更多用法见 `npx skills --help`。
+
 ## publish-rp 安装说明
 
 `publish-rp` 是独立 CLI，将本地原型目录镜像同步到 `prototype-master` 仓库并推送，生成在线预览地址。
